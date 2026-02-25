@@ -5,11 +5,17 @@ Enforces role separation, minimal injection, hierarchical indexing, and knowledg
 
 ## Install
 
+**Global** — available in all projects:
+
+```bash
+claude plugin add --global github:fbwndrud/context-architect
+```
+
+**Project-only** — scoped to the current project:
+
 ```bash
 claude plugin add github:fbwndrud/context-architect
 ```
-
-Once installed, the plugin is available globally across all your projects.
 
 ## Usage
 
@@ -58,6 +64,12 @@ Optional `.context-architect.json` in your project root:
 
 Structure over volume. Static monolithic context files do not reliably improve agent performance.
 Context Architect uses hierarchical indexing — `CLAUDE.md` as a map, domain docs as on-demand content — combined with knowledge diff to verify what the AI actually needs to be told versus what it can already infer from code.
+
+## References
+
+- [Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?](https://arxiv.org/pdf/2602.11988)
+- [The Complete Guide to Claude Code: 70 Tips](https://drive.google.com/file/d/1x2x1T4lzTISnHGN8nd4KtMhL8iwi6QgU/view)
+- [OpenClaw](https://github.com/openclaw/openclaw)
 
 ## License
 
