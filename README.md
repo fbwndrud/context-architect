@@ -5,17 +5,11 @@ Enforces role separation, minimal injection, hierarchical indexing, and knowledg
 
 ## Install
 
-**Global** — 모든 프로젝트에서 사용:
-
-```bash
-claude plugin add --global github:fbwndrud/context-architect
-```
-
-**Project** — 현재 프로젝트에만 적용:
-
 ```bash
 claude plugin add github:fbwndrud/context-architect
 ```
+
+Once installed, the plugin is available globally across all your projects.
 
 ## Usage
 
