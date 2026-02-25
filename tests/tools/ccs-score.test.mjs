@@ -40,4 +40,23 @@ describe('calculateCCS', () => {
     const orphans = result.factors.filter(f => f.name === 'orphan_doc');
     assert.ok(orphans.length >= 1);
   });
+
+  it('calculates Risk rating for moderate issues', async () => {
+    const result = await calculateCCS('tests/fixtures/risk-project');
+    assert.ok(result.total >= 3 && result.total <= 5, `Expected Risk range (3-5), got ${result.total}`);
+    assert.equal(result.rating, 'Risk');
+  });
+
+  it('handles missing CLAUDE.md gracefully', async () => {
+    const result = await calculateCCS('tests/fixtures');  // no CLAUDE.md here
+    assert.equal(result.total, 0);
+    assert.equal(result.rating, 'Safe');
+    assert.deepEqual(result.factors, []);
+  });
+
+  it('handles empty CLAUDE.md gracefully', async () => {
+    const result = await calculateCCS('tests/fixtures/empty-claude');
+    assert.equal(result.total, 0);
+    assert.equal(result.rating, 'Safe');
+  });
 });

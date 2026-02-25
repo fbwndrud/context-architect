@@ -58,3 +58,38 @@ describe('detectAntipatterns — phase: links', () => {
     assert.equal(result.findings.length, 0);
   });
 });
+
+describe('detectAntipatterns — phase: structure (edge cases)', () => {
+  it('handles missing CLAUDE.md gracefully', async () => {
+    const result = await detectAntipatterns('tests/fixtures', 'structure');
+    assert.equal(result.findings.length, 0);
+  });
+
+  it('detects directory dump', async () => {
+    const result = await detectAntipatterns('tests/fixtures/over-specified', 'structure');
+    const dirDump = result.findings.find(f => f.type === 'directory_dump');
+    assert.ok(dirDump, 'Should detect directory dump pattern');
+  });
+});
+
+describe('detectAntipatterns — phase: docs (detections)', () => {
+  it('detects headerless doc', async () => {
+    const result = await detectAntipatterns('tests/fixtures/headerless-doc', 'docs');
+    const headerless = result.findings.find(f => f.type === 'headerless_doc');
+    assert.ok(headerless, 'Should detect doc without # heading');
+  });
+
+  it('detects fat doc (200+ lines)', async () => {
+    const result = await detectAntipatterns('tests/fixtures/fat-doc', 'docs');
+    const fatDoc = result.findings.find(f => f.type === 'fat_doc');
+    assert.ok(fatDoc, 'Should detect doc with 200+ lines');
+  });
+});
+
+describe('detectAntipatterns — edge cases', () => {
+  it('handles empty CLAUDE.md', async () => {
+    const result = await detectAntipatterns('tests/fixtures/empty-claude', 'structure');
+    assert.equal(result.phase, 'structure');
+    // Should not crash
+  });
+});
