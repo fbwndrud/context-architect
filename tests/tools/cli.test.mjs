@@ -90,6 +90,33 @@ describe('CLI: knowledge-probe.mjs', () => {
       assert.equal(err.code, 2);
     }
   });
+
+  it('outputs batched prompts with --extract --batch', async () => {
+    const { stdout } = await exec(NODE, [
+      `${TOOLS}/knowledge-probe.mjs`,
+      '--root', 'tests/fixtures/over-specified',
+      '--extract', '--batch'
+    ]);
+    const result = JSON.parse(stdout);
+    assert.ok(Array.isArray(result));
+    assert.ok(result.length > 0);
+    assert.equal(typeof result[0].batch_id, 'number');
+    assert.ok(Array.isArray(result[0].statements));
+    assert.equal(typeof result[0].prompt, 'string');
+    assert.ok(result[0].prompt.includes('REDUNDANT'));
+  });
+
+  it('--extract without --batch still outputs string array', async () => {
+    const { stdout } = await exec(NODE, [
+      `${TOOLS}/knowledge-probe.mjs`,
+      '--root', 'tests/fixtures/over-specified',
+      '--extract'
+    ]);
+    const result = JSON.parse(stdout);
+    assert.ok(Array.isArray(result));
+    assert.ok(result.length > 0);
+    assert.equal(typeof result[0], 'string');
+  });
 });
 
 describe('CLI: --context-file flag', () => {
