@@ -112,4 +112,13 @@ describe('detectAntipatterns — config integration', () => {
     const result = await detectAntipatterns('tests/fixtures/clean-project', 'structure', { contextFile: 'NONEXISTENT.md' });
     assert.equal(result.findings.length, 0);
   });
+
+  it('caps orphan_doc findings at 10 in links phase', async () => {
+    const result = await detectAntipatterns('tests/fixtures/many-orphans', 'links');
+    const orphans = result.findings.filter(f => f.type === 'orphan_doc');
+    assert.ok(orphans.length <= 10, `Expected <= 10 orphan findings, got ${orphans.length}`);
+    const overflow = result.findings.find(f => f.type === 'orphan_doc_overflow');
+    assert.ok(overflow, 'Expected orphan_doc_overflow summary finding');
+    assert.equal(overflow.severity, 'info');
+  });
 });

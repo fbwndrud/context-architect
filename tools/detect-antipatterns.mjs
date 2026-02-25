@@ -276,6 +276,7 @@ async function analyseLinks(root, claudeContent, relativeLinks, claudePath, conf
   }
 
   // Orphan docs: .md files in docs/ not linked from context file
+  const ORPHAN_CAP = 10;
   const docsDir = path.join(root, 'docs');
   if (await fileExists(docsDir)) {
     const docFiles = await listMdFiles(docsDir, root, config.ignore);
@@ -283,16 +284,27 @@ async function analyseLinks(root, claudeContent, relativeLinks, claudePath, conf
       relativeLinks.map(link => path.resolve(root, link))
     );
 
-    for (const docFile of docFiles) {
-      if (!linkedAbsPaths.has(docFile)) {
-        findings.push({
-          type: 'orphan_doc',
-          severity: 'medium',
-          file: docFile,
-          line: 1,
-          message: `${path.basename(docFile)} is not linked from CLAUDE.md`,
-        });
-      }
+    const orphanFiles = docFiles.filter(f => !linkedAbsPaths.has(f));
+    const capped = orphanFiles.slice(0, ORPHAN_CAP);
+
+    for (const docFile of capped) {
+      findings.push({
+        type: 'orphan_doc',
+        severity: 'medium',
+        file: docFile,
+        line: 1,
+        message: `${path.basename(docFile)} is not linked from context file`,
+      });
+    }
+
+    if (orphanFiles.length > ORPHAN_CAP) {
+      findings.push({
+        type: 'orphan_doc_overflow',
+        severity: 'info',
+        file: docsDir,
+        line: 1,
+        message: `${orphanFiles.length - ORPHAN_CAP} additional orphan docs not listed`,
+      });
     }
   }
 
