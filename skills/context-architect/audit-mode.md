@@ -53,7 +53,7 @@ Wait for confirmation before running phases.
 Detect anti-patterns in context file structure.
 
 ```bash
-node ${PLUGIN_ROOT}/tools/detect-antipatterns.mjs --phase structure --root .
+node ${CLAUDE_PLUGIN_ROOT}/tools/detect-antipatterns.mjs --phase structure --root .
 ```
 
 ### Checks
@@ -78,7 +78,7 @@ Each finding includes: file path, line range, anti-pattern type, and severity.
 Analyze reference docs (Layer 2) for structural quality.
 
 ```bash
-node ${PLUGIN_ROOT}/tools/detect-antipatterns.mjs --phase docs --root .
+node ${CLAUDE_PLUGIN_ROOT}/tools/detect-antipatterns.mjs --phase docs --root .
 ```
 
 ### Checks
@@ -96,7 +96,7 @@ node ${PLUGIN_ROOT}/tools/detect-antipatterns.mjs --phase docs --root .
 Verify all links between Layer 1 and Layer 2 are valid.
 
 ```bash
-node ${PLUGIN_ROOT}/tools/detect-antipatterns.mjs --phase links --root .
+node ${CLAUDE_PLUGIN_ROOT}/tools/detect-antipatterns.mjs --phase links --root .
 ```
 
 ### Checks
@@ -115,7 +115,7 @@ The most important phase. Tests whether context tells the AI things it already k
 ### Step 1: Extract Statements
 
 ```bash
-node ${PLUGIN_ROOT}/tools/knowledge-probe.mjs --root . --extract
+node ${CLAUDE_PLUGIN_ROOT}/tools/knowledge-probe.mjs --root . --extract
 ```
 
 This reads all in-scope context files and outputs extracted statements as JSON:
@@ -169,7 +169,7 @@ Compare each sub-agent response against the original context statement:
 After all phases complete, calculate the Context Complexity Score.
 
 ```bash
-node ${PLUGIN_ROOT}/tools/ccs-score.mjs --root .
+node ${CLAUDE_PLUGIN_ROOT}/tools/ccs-score.mjs --root .
 ```
 
 ### CCS Factors
@@ -343,4 +343,4 @@ Show link corrections or removals:
 - **No changes without approval:** Present proposals, wait for explicit approval per fix, then apply.
 - **Iron Law applies:** Every piece of context must justify its presence. Audit verifies this.
 - **Sub-agent isolation:** The Knowledge Diff sub-agent must have ZERO project context to produce valid probes.
-- **`${PLUGIN_ROOT}` resolution:** When running tool commands, resolve `${PLUGIN_ROOT}` to the plugin's actual installation directory.
+- **`${CLAUDE_PLUGIN_ROOT}` resolution:** When running tool commands, resolve `${CLAUDE_PLUGIN_ROOT}` to the plugin's actual installation directory.

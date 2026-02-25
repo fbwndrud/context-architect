@@ -102,7 +102,7 @@ Based on classification and test results, choose the appropriate action:
 After making changes, verify all links between Layer 1 and Layer 2 are still valid:
 
 ```bash
-node ${PLUGIN_ROOT}/tools/detect-antipatterns.mjs --phase links --root .
+node ${CLAUDE_PLUGIN_ROOT}/tools/detect-antipatterns.mjs --phase links --root .
 ```
 
 This catches:
@@ -116,7 +116,7 @@ Fix any issues before proceeding.
 Run a lightweight CCS calculation to ensure the update didn't degrade context quality:
 
 ```bash
-node ${PLUGIN_ROOT}/tools/ccs-score.mjs --root .
+node ${CLAUDE_PLUGIN_ROOT}/tools/ccs-score.mjs --root .
 ```
 
 **If the score increased** (context quality degraded), warn the user with a before/after comparison:
@@ -244,4 +244,4 @@ Multi-stage deployment pipeline with VPN requirement and canary support.
 - **Iron Law applies:** Every piece of context must justify its presence. Updates are not exempt.
 - **Anti-Append Rule:** Always consider restructuring before adding. Files grow; discipline prevents bloat.
 - **Dynamic stays dynamic:** Never put temporary or session-specific information into static context files.
-- **`${PLUGIN_ROOT}` resolution:** When running tool commands, resolve `${PLUGIN_ROOT}` to the plugin's actual installation directory.
+- **`${CLAUDE_PLUGIN_ROOT}` resolution:** When running tool commands, resolve `${CLAUDE_PLUGIN_ROOT}` to the plugin's actual installation directory.

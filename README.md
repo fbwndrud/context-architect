@@ -6,45 +6,37 @@ Enforces role separation, minimal injection, hierarchical indexing, and knowledg
 ## Install
 
 ```bash
-claude plugin add context-architect
+claude plugin add github:fbwndrud/context-architect
 ```
 
-Or manual: clone this repo and add to your Claude Code plugin settings.
+Once installed, the plugin is available globally across all your projects.
 
 ## Usage
 
-Three modes, all invoked via `/context-architect`:
+Invoke via `/context-architect` in any project:
 
-**CREATE** -- Run on a new project. Designs a two-layer context architecture
-(root CLAUDE.md as index, scoped docs for domain knowledge).
+**CREATE** — Design a two-layer context architecture for a new project.
+Generates a root `CLAUDE.md` index and scoped reference docs for domain knowledge.
 
-**AUDIT** -- Run on an existing project. Performs 4-phase analysis
-(structure, docs, links, knowledge diff) and produces a CCS score with fix recommendations.
+**AUDIT** — Analyze an existing project's context files.
+Runs 4-phase analysis (structure, docs, links, knowledge diff) and produces a CCS score with fix proposals.
 
-**UPDATE** -- Run after project changes. Classifies what changed and syncs
-context files to reflect the current state.
+**UPDATE** — Sync context files after project changes.
+Classifies what changed and updates context while enforcing the Iron Law.
 
 ## Tools
 
-CLI tools for automated analysis:
+The plugin includes CLI tools for automated analysis. When invoked from skills, tools are resolved via `${CLAUDE_PLUGIN_ROOT}`:
 
 ```bash
-node tools/ccs-score.mjs .                                     # Context Complexity Score
-node tools/detect-antipatterns.mjs --phase structure --root .   # Anti-pattern detection
-node tools/knowledge-probe.mjs --root . --extract               # Statement extraction
-```
-
-Or via npm scripts:
-
-```bash
-npm run ccs -- .
-npm run antipatterns -- --phase structure --root .
-npm run probe -- --root . --extract
+node ${CLAUDE_PLUGIN_ROOT}/tools/ccs-score.mjs .
+node ${CLAUDE_PLUGIN_ROOT}/tools/detect-antipatterns.mjs --phase structure --root .
+node ${CLAUDE_PLUGIN_ROOT}/tools/knowledge-probe.mjs --root . --extract
 ```
 
 ## Configuration
 
-Optional `.context-architect.json` in project root:
+Optional `.context-architect.json` in your project root:
 
 ```json
 {
@@ -55,13 +47,17 @@ Optional `.context-architect.json` in project root:
 }
 ```
 
+| Field | Description |
+|-------|-------------|
+| `context_files` | Additional Layer 1 files to include in scope |
+| `reference_docs` | Additional Layer 2 files to include in scope |
+| `ignore` | Globs to exclude from analysis |
+| `probe_model` | Model for Knowledge Diff sub-agent (default: `sonnet`) |
+
 ## Philosophy
 
-Structure over volume. Research shows static monolithic context files do not
-reliably improve agent performance. Context Architect uses hierarchical
-indexing -- CLAUDE.md as a map, domain docs as on-demand content -- combined
-with knowledge diff to verify what the AI actually needs to be told versus
-what it can already infer from code.
+Structure over volume. Static monolithic context files do not reliably improve agent performance.
+Context Architect uses hierarchical indexing — `CLAUDE.md` as a map, domain docs as on-demand content — combined with knowledge diff to verify what the AI actually needs to be told versus what it can already infer from code.
 
 ## License
 

@@ -7,5 +7,7 @@
   },
   "license": "MIT",
   "keywords": ["context", "CLAUDE.md", "audit", "minimal-injection", "role-separation"],
+  "homepage": "https://github.com/fbwndrud/context-architect",
+  "repository": "https://github.com/fbwndrud/context-architect",
   "skills": "./skills/"
 }
