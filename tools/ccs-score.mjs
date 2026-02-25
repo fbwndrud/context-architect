@@ -83,6 +83,10 @@ export async function calculateCCS(rootPath, options = {}) {
   }
 
   // ── Resolve linked files and check existence ───────────────────────
+  const FAT_DOC_CAP = 10;
+  const allFatDocs = [];
+  const contextFileName = path.basename(claudePath);
+
   const resolvedLinks = relativeLinks.map(link => ({
     raw: link,
     abs: path.resolve(root, link),
@@ -106,7 +110,7 @@ export async function calculateCCS(rootPath, options = {}) {
     // ── 9. Fat doc: linked doc >= 200 lines ─────────────────────────
     const lines = content.split('\n');
     if (lines.length >= 200) {
-      factors.push({ name: 'fat_doc', score: 2, file: link.abs });
+      allFatDocs.push(link.abs);
     }
   }
 
@@ -129,7 +133,7 @@ export async function calculateCCS(rootPath, options = {}) {
       const content = await fs.readFile(docFile, 'utf8');
       const lines = content.split('\n');
       if (lines.length >= 200) {
-        factors.push({ name: 'fat_doc', score: 2, file: docFile });
+        allFatDocs.push(docFile);
       }
     }
 
@@ -141,6 +145,20 @@ export async function calculateCCS(rootPath, options = {}) {
         detail: `${orphanFiles.length - ORPHAN_CAP} additional orphan docs not scored`,
       });
     }
+  }
+
+  // ── Fat doc factors (capped) ────────────────────────────────────────
+  const cappedFat = allFatDocs.slice(0, FAT_DOC_CAP);
+  for (const file of cappedFat) {
+    factors.push({ name: 'fat_doc', score: 2, file });
+  }
+  if (allFatDocs.length > FAT_DOC_CAP) {
+    factors.push({
+      name: 'fat_doc_overflow',
+      score: 0,
+      file: docsDir || root,
+      detail: `${allFatDocs.length - FAT_DOC_CAP} additional fat docs not scored`,
+    });
   }
 
   // ── Calculate total and rating ─────────────────────────────────────

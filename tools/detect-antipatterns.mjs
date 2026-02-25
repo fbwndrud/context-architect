@@ -305,13 +305,14 @@ async function analyseLinks(root, claudeContent, relativeLinks, claudePath, conf
     const orphanFiles = docFiles.filter(f => !linkedAbsPaths.has(f));
     const capped = orphanFiles.slice(0, ORPHAN_CAP);
 
+    const ctxName = path.basename(claudePath);
     for (const docFile of capped) {
       findings.push({
         type: 'orphan_doc',
         severity: 'medium',
         file: docFile,
         line: 1,
-        message: `${path.basename(docFile)} is not linked from context file`,
+        message: `${path.basename(docFile)} is not linked from ${ctxName}`,
       });
     }
 
