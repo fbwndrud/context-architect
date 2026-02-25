@@ -1,0 +1,11 @@
+{
+  "name": "context-architect",
+  "description": "Context structure architect and auditor: enforces role separation, minimal injection, and prevents over-specification",
+  "version": "0.1.0",
+  "author": {
+    "name": "jklyoo"
+  },
+  "license": "MIT",
+  "keywords": ["context", "CLAUDE.md", "audit", "minimal-injection", "role-separation"],
+  "skills": "./skills/"
+}
