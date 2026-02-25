@@ -111,6 +111,7 @@ if (isMain) {
   const args = process.argv.slice(2);
   let rootPath = '.';
   let extract = false;
+  let batch = false;
   let contextFile;
 
   for (let i = 0; i < args.length; i++) {
@@ -118,6 +119,8 @@ if (isMain) {
       rootPath = args[++i];
     } else if (args[i] === '--extract') {
       extract = true;
+    } else if (args[i] === '--batch') {
+      batch = true;
     } else if (args[i] === '--context-file' && args[i + 1]) {
       contextFile = args[++i];
     }
@@ -142,5 +145,10 @@ if (isMain) {
 
   const statements = extractStatements(ctxContent);
 
-  console.log(JSON.stringify(statements, null, 2));
+  if (batch) {
+    const batches = buildProbeBatches(statements);
+    console.log(JSON.stringify(batches, null, 2));
+  } else {
+    console.log(JSON.stringify(statements, null, 2));
+  }
 }
