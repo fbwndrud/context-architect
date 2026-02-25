@@ -5,8 +5,8 @@
   "description": "Claude Code plugin: context structure architect and auditor",
   "license": "MIT",
   "scripts": {
-    "test": "node --test tests/",
-    "test:tools": "node --test tests/tools/",
+    "test": "node --test 'tests/tools/*.test.mjs'",
+    "test:tools": "node --test 'tests/tools/*.test.mjs'",
     "ccs": "node tools/ccs-score.mjs",
     "antipatterns": "node tools/detect-antipatterns.mjs",
     "probe": "node tools/knowledge-probe.mjs"
