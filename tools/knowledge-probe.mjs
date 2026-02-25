@@ -49,6 +49,59 @@ export function extractStatements(markdownContent) {
   return statements;
 }
 
+const PROBE_PROMPT_TEMPLATE = `You are a knowledge probe agent testing whether context file statements contain information an AI coding assistant would already know.
+
+RULES:
+- Use ONLY your training knowledge. Do NOT read any project files.
+- Do NOT assume any project-specific details.
+- For each statement:
+  1. Convert it into a neutral question that does NOT reveal the answer
+  2. Answer that question from your general knowledge
+  3. Compare your answer to the original statement
+  4. Classify: REDUNDANT | UNIQUE | REVIEW
+
+CLASSIFICATION:
+- REDUNDANT: Your answer matches the statement (AI already knows this)
+- UNIQUE: Your answer differs or you cannot answer (project-specific knowledge)
+- REVIEW: Partial match (needs human decision)
+
+Statements:
+{numbered_statements}
+
+Respond ONLY with a JSON array:
+[
+  {
+    "statement": "original text",
+    "question": "neutral question you generated",
+    "answer": "your knowledge-based answer",
+    "classification": "REDUNDANT | UNIQUE | REVIEW",
+    "reason": "brief explanation"
+  }
+]`;
+
+/**
+ * Build batched probe prompts for sub-agent knowledge diff.
+ *
+ * @param {string[]} statements — extracted directive statements
+ * @param {number} [batchSize=10] — max statements per batch
+ * @returns {Array<{ batch_id: number, statements: string[], prompt: string }>}
+ */
+export function buildProbeBatches(statements, batchSize = 10) {
+  if (statements.length === 0) return [];
+
+  const batches = [];
+  for (let i = 0; i < statements.length; i += batchSize) {
+    const chunk = statements.slice(i, i + batchSize);
+    const numbered = chunk.map((s, idx) => `${i + idx + 1}. ${s}`).join('\n');
+    batches.push({
+      batch_id: batches.length + 1,
+      statements: chunk,
+      prompt: PROBE_PROMPT_TEMPLATE.replace('{numbered_statements}', numbered),
+    });
+  }
+  return batches;
+}
+
 // ── CLI entry point ───────────────────────────────────────────────────────
 
 const isMain = process.argv[1] &&
