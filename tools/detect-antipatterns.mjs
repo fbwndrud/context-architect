@@ -210,6 +210,9 @@ async function analyseDocs(root, relativeLinks, config) {
     }
   }
 
+  const FAT_DOC_CAP = 10;
+  const fatDocs = [];
+
   for (const docPath of docPaths) {
     if (!(await fileExists(docPath))) continue;
 
@@ -234,14 +237,29 @@ async function analyseDocs(root, relativeLinks, config) {
     // Fat doc: 200+ lines
     const lineCount = content.split('\n').length;
     if (lineCount >= 200) {
-      findings.push({
-        type: 'fat_doc',
-        severity: 'medium',
-        file: docPath,
-        line: 1,
-        message: `Document is ${lineCount} lines — consider splitting`,
-      });
+      fatDocs.push({ file: docPath, lineCount });
     }
+  }
+
+  const cappedFat = fatDocs.slice(0, FAT_DOC_CAP);
+  for (const { file, lineCount } of cappedFat) {
+    findings.push({
+      type: 'fat_doc',
+      severity: 'medium',
+      file,
+      line: 1,
+      message: `Document is ${lineCount} lines — consider splitting`,
+    });
+  }
+
+  if (fatDocs.length > FAT_DOC_CAP) {
+    findings.push({
+      type: 'fat_doc_overflow',
+      severity: 'info',
+      file: path.join(root, 'docs'),
+      line: 1,
+      message: `${fatDocs.length - FAT_DOC_CAP} additional fat docs not scored`,
+    });
   }
 
   return findings;
@@ -303,7 +321,7 @@ async function analyseLinks(root, claudeContent, relativeLinks, claudePath, conf
         severity: 'info',
         file: docsDir,
         line: 1,
-        message: `${orphanFiles.length - ORPHAN_CAP} additional orphan docs not listed`,
+        message: `${orphanFiles.length - ORPHAN_CAP} additional orphan docs not scored`,
       });
     }
   }
