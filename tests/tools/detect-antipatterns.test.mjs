@@ -93,3 +93,23 @@ describe('detectAntipatterns — edge cases', () => {
     // Should not crash
   });
 });
+
+describe('detectAntipatterns — config integration', () => {
+  it('ignores docs matching config ignore patterns (docs phase)', async () => {
+    const result = await detectAntipatterns('tests/fixtures/with-config', 'docs');
+    const files = result.findings.map(f => f.file);
+    assert.ok(!files.some(f => f.includes('plans')), 'Ignored paths should not appear in docs findings');
+  });
+
+  it('ignores docs matching config ignore patterns (links phase)', async () => {
+    const result = await detectAntipatterns('tests/fixtures/with-config', 'links');
+    const orphans = result.findings.filter(f => f.type === 'orphan_doc');
+    const orphanFiles = orphans.map(f => f.file);
+    assert.ok(!orphanFiles.some(f => f.includes('plans')), 'Ignored paths should not appear as orphans');
+  });
+
+  it('accepts options.contextFile override', async () => {
+    const result = await detectAntipatterns('tests/fixtures/clean-project', 'structure', { contextFile: 'NONEXISTENT.md' });
+    assert.equal(result.findings.length, 0);
+  });
+});

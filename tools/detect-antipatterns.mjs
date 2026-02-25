@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { loadConfig, resolveContextFile, fileExists, listMdFiles } from './lib/config.mjs';
 
 /**
  * 3-phase anti-pattern detector for CLAUDE.md context files.
@@ -11,11 +12,14 @@ import path from 'node:path';
  *
  * @param {string} rootPath — path to project root (relative or absolute)
  * @param {'structure' | 'docs' | 'links'} phase — detection phase to run
+ * @param {object} [options]
+ * @param {string} [options.contextFile] — override context file path
  * @returns {Promise<{ phase: string, findings: Array<{ type: string, severity: string, file: string, line?: number, message: string }> }>}
  */
-export async function detectAntipatterns(rootPath, phase) {
+export async function detectAntipatterns(rootPath, phase, options = {}) {
   const root = path.resolve(rootPath);
-  const claudePath = path.join(root, 'CLAUDE.md');
+  const config = await loadConfig(root);
+  const claudePath = resolveContextFile(root, options.contextFile, config);
 
   let claudeContent;
   try {
@@ -38,9 +42,9 @@ export async function detectAntipatterns(rootPath, phase) {
     case 'structure':
       return { phase, findings: analyseStructure(claudeContent, claudeLines, claudePath) };
     case 'docs':
-      return { phase, findings: await analyseDocs(root, relativeLinks) };
+      return { phase, findings: await analyseDocs(root, relativeLinks, config) };
     case 'links':
-      return { phase, findings: await analyseLinks(root, claudeContent, relativeLinks, claudePath) };
+      return { phase, findings: await analyseLinks(root, claudeContent, relativeLinks, claudePath, config) };
     default:
       return { phase, findings: [] };
   }
@@ -183,7 +187,7 @@ function analyseStructure(content, lines, filePath) {
 
 // ── Phase: docs ───────────────────────────────────────────────────────────
 
-async function analyseDocs(root, relativeLinks) {
+async function analyseDocs(root, relativeLinks, config) {
   const findings = [];
 
   // Collect all doc files to check: linked docs + docs/ directory contents
@@ -200,7 +204,7 @@ async function analyseDocs(root, relativeLinks) {
   // Add docs/ directory contents
   const docsDir = path.join(root, 'docs');
   if (await fileExists(docsDir)) {
-    const files = await listMdFiles(docsDir);
+    const files = await listMdFiles(docsDir, root, config.ignore);
     for (const f of files) {
       docPaths.add(f);
     }
@@ -245,11 +249,11 @@ async function analyseDocs(root, relativeLinks) {
 
 // ── Phase: links ──────────────────────────────────────────────────────────
 
-async function analyseLinks(root, claudeContent, relativeLinks, claudePath) {
+async function analyseLinks(root, claudeContent, relativeLinks, claudePath, config) {
   const findings = [];
   const claudeLines = claudeContent.split('\n');
 
-  // Broken links: CLAUDE.md links to non-existent files
+  // Broken links: context file links to non-existent files
   for (const link of relativeLinks) {
     const abs = path.resolve(root, link);
     if (!(await fileExists(abs))) {
@@ -271,10 +275,10 @@ async function analyseLinks(root, claudeContent, relativeLinks, claudePath) {
     }
   }
 
-  // Orphan docs: .md files in docs/ not linked from CLAUDE.md
+  // Orphan docs: .md files in docs/ not linked from context file
   const docsDir = path.join(root, 'docs');
   if (await fileExists(docsDir)) {
-    const docFiles = await listMdFiles(docsDir);
+    const docFiles = await listMdFiles(docsDir, root, config.ignore);
     const linkedAbsPaths = new Set(
       relativeLinks.map(link => path.resolve(root, link))
     );
@@ -296,34 +300,6 @@ async function analyseLinks(root, claudeContent, relativeLinks, claudePath) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
-
-async function fileExists(p) {
-  try {
-    await fs.access(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Recursively list all .md files under a directory.
- */
-async function listMdFiles(dir) {
-  const results = [];
-  try {
-    const entries = await fs.readdir(dir, { withFileTypes: true, recursive: true });
-    for (const entry of entries) {
-      if (!entry.isFile()) continue;
-      if (!entry.name.endsWith('.md')) continue;
-      const parent = entry.parentPath || entry.path;
-      results.push(path.join(parent, entry.name));
-    }
-  } catch {
-    // directory not readable
-  }
-  return results;
-}
 
 /**
  * Extract paragraphs from markdown content, skipping code blocks and headings.
@@ -383,12 +359,15 @@ if (isMain) {
   const args = process.argv.slice(2);
   let rootPath = '.';
   let phase = 'structure';
+  let contextFile;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--root' && args[i + 1]) {
       rootPath = args[++i];
     } else if (args[i] === '--phase' && args[i + 1]) {
       phase = args[++i];
+    } else if (args[i] === '--context-file' && args[i + 1]) {
+      contextFile = args[++i];
     }
   }
 
@@ -398,7 +377,7 @@ if (isMain) {
     process.exit(2);
   }
 
-  detectAntipatterns(rootPath, phase)
+  detectAntipatterns(rootPath, phase, { contextFile })
     .then(result => {
       console.log(JSON.stringify(result, null, 2));
       process.exit(result.findings.length > 0 ? 1 : 0);

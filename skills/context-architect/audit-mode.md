@@ -118,33 +118,51 @@ The most important phase. Tests whether context tells the AI things it already k
 node ${CLAUDE_PLUGIN_ROOT}/tools/knowledge-probe.mjs --root . --extract
 ```
 
-This reads all in-scope context files and outputs extracted statements as JSON:
+This reads the context file and outputs raw directive statements as a JSON array of strings:
 
 ```json
 [
+  "All components use PascalCase",
+  "Deploy with ./scripts/deploy.sh staging",
+  "Tests use vitest",
+  "API errors use AppError class"
+]
+```
+
+### Step 2: Probe Sub-Agent (Question Generation + Probing + Classification)
+
+Spawn a sub-agent that handles the entire knowledge diff pipeline in one pass:
+
+- **Model:** from `.context-architect.json` → `probe_model` (default: `sonnet`)
+- **Context:** NONE — the sub-agent must not see any project files
+- **Input:** the raw statements from Step 1
+- **Batching:** group 5-10 related statements per call for efficiency
+
+**Sub-agent prompt template:**
+
+```
+You are a knowledge probe agent. For each statement below:
+1. Convert it into a neutral question (do not reveal the original statement's answer)
+2. Answer that question using ONLY your training knowledge
+3. Compare your answer to the original statement
+4. Classify as REDUNDANT, UNIQUE, or REVIEW
+
+Statements:
+{statements}
+
+For each statement, respond in this JSON format:
+[
   {
-    "file": "CLAUDE.md",
-    "line": 12,
-    "statement": "All components use PascalCase",
-    "question": "In React, what is the standard component naming convention?"
+    "statement": "...",
+    "question": "...",
+    "answer": "...",
+    "classification": "REDUNDANT | UNIQUE | REVIEW",
+    "reason": "..."
   }
 ]
 ```
 
-### Step 2: Probe Sub-Agent
-
-Spawn a sub-agent with the following constraints:
-
-- **Model:** from `.context-architect.json` → `probe_model` (default: `sonnet`)
-- **Context:** NONE — the sub-agent must not see any project files
-- **Input:** the extracted questions from Step 1
-- **Batching:** group 5-10 related statements per call for efficiency
-
-The sub-agent answers each question using only its training knowledge.
-
-### Step 3: Classify Results
-
-Compare each sub-agent response against the original context statement:
+### Classification Rules
 
 | Sub-Agent Response | Classification | Action |
 |---|---|---|
@@ -155,7 +173,7 @@ Compare each sub-agent response against the original context statement:
 
 ### Examples
 
-| Context Statement | Question | Sub-Agent Says | Classification |
+| Context Statement | Sub-Agent Question | Sub-Agent Answer | Classification |
 |---|---|---|---|
 | "All components use PascalCase" | "In React, what is the standard component naming convention?" | "PascalCase" | REDUNDANT |
 | "Deploy with `./scripts/deploy.sh staging`" | "How would you deploy this project?" | "I don't have enough info" | UNIQUE |

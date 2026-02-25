@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { loadConfig, resolveContextFile, fileExists, listMdFiles } from './lib/config.mjs';
 
 /**
  * Context Complexity Score (CCS) calculator.
@@ -8,14 +9,17 @@ import path from 'node:path';
  * in CLAUDE.md and related documentation files.
  *
  * @param {string} rootPath — path to project root (relative or absolute)
+ * @param {object} [options]
+ * @param {string} [options.contextFile] — override context file path
  * @returns {Promise<{factors: Array<{name: string, score: number, file: string}>, total: number, rating: string}>}
  */
-export async function calculateCCS(rootPath) {
+export async function calculateCCS(rootPath, options = {}) {
   const root = path.resolve(rootPath);
+  const config = await loadConfig(root);
   const factors = [];
 
-  // ── Read CLAUDE.md ──────────────────────────────────────────────────
-  const claudePath = path.join(root, 'CLAUDE.md');
+  // ── Read context file ─────────────────────────────────────────────
+  const claudePath = resolveContextFile(root, options.contextFile, config);
   let claudeContent;
   try {
     claudeContent = await fs.readFile(claudePath, 'utf8');
@@ -106,25 +110,36 @@ export async function calculateCCS(rootPath) {
     }
   }
 
-  // ── 6. Orphan docs: files in docs/ not linked from CLAUDE.md ──────
+  // ── 6. Orphan docs: files in docs/ not linked from context file ────
+  const ORPHAN_CAP = 10;
   const docsDir = path.join(root, 'docs');
   const docsExist = await fileExists(docsDir);
   if (docsExist) {
-    const docFiles = await listFiles(docsDir);
+    const docFiles = await listMdFiles(docsDir, root, config.ignore);
     const linkedAbsPaths = new Set(
       resolvedLinks.map(l => l.abs)
     );
-    for (const docFile of docFiles) {
-      if (!linkedAbsPaths.has(docFile)) {
-        factors.push({ name: 'orphan_doc', score: 1, file: docFile });
+    const orphanFiles = docFiles.filter(f => !linkedAbsPaths.has(f));
 
-        // Also check fat_doc for orphans
-        const content = await fs.readFile(docFile, 'utf8');
-        const lines = content.split('\n');
-        if (lines.length >= 200) {
-          factors.push({ name: 'fat_doc', score: 2, file: docFile });
-        }
+    const capped = orphanFiles.slice(0, ORPHAN_CAP);
+    for (const docFile of capped) {
+      factors.push({ name: 'orphan_doc', score: 1, file: docFile });
+
+      // Also check fat_doc for orphans
+      const content = await fs.readFile(docFile, 'utf8');
+      const lines = content.split('\n');
+      if (lines.length >= 200) {
+        factors.push({ name: 'fat_doc', score: 2, file: docFile });
       }
+    }
+
+    if (orphanFiles.length > ORPHAN_CAP) {
+      factors.push({
+        name: 'orphan_doc_overflow',
+        score: 0,
+        file: docsDir,
+        detail: `${orphanFiles.length - ORPHAN_CAP} additional orphan docs not scored`,
+      });
     }
   }
 
@@ -136,35 +151,6 @@ export async function calculateCCS(rootPath) {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────
-
-async function fileExists(p) {
-  try {
-    await fs.access(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Recursively list all .md files under a directory.
- */
-async function listFiles(dir) {
-  const results = [];
-  try {
-    const entries = await fs.readdir(dir, { withFileTypes: true, recursive: true });
-    for (const entry of entries) {
-      if (!entry.isFile()) continue;
-      if (!entry.name.endsWith('.md')) continue;
-      // Node 20+ uses parentPath, older uses path
-      const parent = entry.parentPath || entry.path;
-      results.push(path.join(parent, entry.name));
-    }
-  } catch {
-    // directory not readable — skip
-  }
-  return results;
-}
 
 /**
  * Count paragraphs >= charThreshold characters in markdown content,
@@ -203,8 +189,21 @@ const isMain = process.argv[1] &&
   path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname);
 
 if (isMain) {
-  const rootPath = process.argv[2] || '.';
-  calculateCCS(rootPath)
+  const args = process.argv.slice(2);
+  let rootPath = '.';
+  let contextFile;
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--root' && args[i + 1]) {
+      rootPath = args[++i];
+    } else if (args[i] === '--context-file' && args[i + 1]) {
+      contextFile = args[++i];
+    } else if (!args[i].startsWith('--')) {
+      rootPath = args[i];
+    }
+  }
+
+  calculateCCS(rootPath, { contextFile })
     .then(result => {
       console.log(JSON.stringify(result, null, 2));
       process.exit(result.total > 0 ? 1 : 0);

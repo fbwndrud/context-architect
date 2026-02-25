@@ -1,0 +1,6 @@
+{
+  "context_files": ["CLAUDE.md"],
+  "reference_docs": ["docs/conventions.md"],
+  "ignore": ["docs/plans/**"],
+  "probe_model": "haiku"
+}

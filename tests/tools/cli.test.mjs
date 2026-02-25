@@ -70,7 +70,7 @@ describe('CLI: knowledge-probe.mjs', () => {
     }
   });
 
-  it('outputs valid JSON array with --extract', async () => {
+  it('outputs JSON string array with --extract', async () => {
     const { stdout } = await exec(NODE, [
       `${TOOLS}/knowledge-probe.mjs`,
       '--root', 'tests/fixtures/over-specified',
@@ -79,8 +79,7 @@ describe('CLI: knowledge-probe.mjs', () => {
     const result = JSON.parse(stdout);
     assert.ok(Array.isArray(result));
     assert.ok(result.length > 0);
-    assert.ok(result[0].original);
-    assert.ok(result[0].question);
+    assert.equal(typeof result[0], 'string', 'CLI should output raw statements as strings');
   });
 
   it('errors when CLAUDE.md not found', async () => {
@@ -90,5 +89,28 @@ describe('CLI: knowledge-probe.mjs', () => {
     } catch (err) {
       assert.equal(err.code, 2);
     }
+  });
+});
+
+describe('CLI: --context-file flag', () => {
+  it('ccs-score.mjs accepts --context-file', async () => {
+    const { stdout } = await exec(NODE, [
+      `${TOOLS}/ccs-score.mjs`,
+      '--root', 'tests/fixtures/clean-project',
+      '--context-file', 'CLAUDE.md'
+    ]);
+    const result = JSON.parse(stdout);
+    assert.equal(result.total, 0);
+  });
+
+  it('detect-antipatterns.mjs accepts --context-file', async () => {
+    const { stdout } = await exec(NODE, [
+      `${TOOLS}/detect-antipatterns.mjs`,
+      '--phase', 'structure',
+      '--root', 'tests/fixtures/clean-project',
+      '--context-file', 'CLAUDE.md'
+    ]);
+    const result = JSON.parse(stdout);
+    assert.equal(result.phase, 'structure');
   });
 });

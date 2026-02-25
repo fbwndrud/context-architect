@@ -59,4 +59,34 @@ describe('calculateCCS', () => {
     assert.equal(result.total, 0);
     assert.equal(result.rating, 'Safe');
   });
+
+  it('caps orphan_doc factors at 10', async () => {
+    const result = await calculateCCS('tests/fixtures/many-orphans');
+    const orphans = result.factors.filter(f => f.name === 'orphan_doc');
+    assert.ok(orphans.length <= 10, `Expected <= 10 orphan factors, got ${orphans.length}`);
+    const overflow = result.factors.find(f => f.name === 'orphan_doc_overflow');
+    assert.ok(overflow, 'Expected orphan_doc_overflow summary factor');
+    assert.equal(overflow.score, 0);
+  });
+
+  it('respects config ignore patterns', async () => {
+    const result = await calculateCCS('tests/fixtures/with-config');
+    // docs/plans/v1.md should be ignored, not counted as orphan
+    const orphans = result.factors.filter(f => f.name === 'orphan_doc');
+    const orphanFiles = orphans.map(f => f.file);
+    assert.ok(!orphanFiles.some(f => f.includes('plans')), 'Ignored paths should not appear as orphans');
+  });
+
+  it('accepts options.contextFile override', async () => {
+    // Use a path that doesn't exist — should return empty
+    const result = await calculateCCS('tests/fixtures/clean-project', { contextFile: 'NONEXISTENT.md' });
+    assert.equal(result.total, 0);
+    assert.deepEqual(result.factors, []);
+  });
+
+  it('works with config-based context file', async () => {
+    const result = await calculateCCS('tests/fixtures/with-config');
+    // Should be able to read CLAUDE.md via config and produce results
+    assert.ok(typeof result.total === 'number');
+  });
 });

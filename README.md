@@ -5,6 +5,8 @@ Enforces role separation, minimal injection, hierarchical indexing, and knowledg
 
 ## Install
 
+> **Note:** Run the install command from your system terminal, not inside a Claude Code session.
+
 **Global** — available in all projects:
 
 ```bash
@@ -35,30 +37,40 @@ Classifies what changed and updates context while enforcing the Iron Law.
 The plugin includes CLI tools for automated analysis. When invoked from skills, tools are resolved via `${CLAUDE_PLUGIN_ROOT}`:
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/tools/ccs-score.mjs .
+node ${CLAUDE_PLUGIN_ROOT}/tools/ccs-score.mjs --root .
 node ${CLAUDE_PLUGIN_ROOT}/tools/detect-antipatterns.mjs --phase structure --root .
 node ${CLAUDE_PLUGIN_ROOT}/tools/knowledge-probe.mjs --root . --extract
 ```
 
+All tools accept `--context-file <path>` to override the default context file. Without this flag, the context file is resolved from `.context-architect.json` (see Configuration below), falling back to `CLAUDE.md`.
+
+Phase 4 (Knowledge Diff) classification requires the `/context-architect` skill. The CLI extracts raw statements; a Claude sub-agent then handles question generation, probing, and classification in a single pass.
+
+### Orphan Doc Cap
+
+When scoring orphan documents, the CCS calculator caps individual `orphan_doc` factors at 10. Projects with more orphans receive a single `orphan_doc_overflow` summary (score: 0) noting how many additional orphans were found. This prevents score inflation in large doc trees.
+
 ## Configuration
 
-Optional `.context-architect.json` in your project root:
+Optional `.context-architect.json` in your project root. All tools read this file automatically:
 
 ```json
 {
-  "context_files": ["CLAUDE.md", ".claude/**"],
+  "context_files": ["CLAUDE.md"],
   "reference_docs": ["src/auth/ARCHITECTURE.md"],
   "ignore": ["docs/plans/**"],
   "probe_model": "sonnet"
 }
 ```
 
-| Field | Description |
-|-------|-------------|
-| `context_files` | Additional Layer 1 files to include in scope |
-| `reference_docs` | Additional Layer 2 files to include in scope |
-| `ignore` | Globs to exclude from analysis |
-| `probe_model` | Model for Knowledge Diff sub-agent (default: `sonnet`) |
+| Field | Description | Default |
+|-------|-------------|---------|
+| `context_files` | Layer 1 index files to include in scope | `["CLAUDE.md"]` |
+| `reference_docs` | Additional Layer 2 files to include in scope | `[]` |
+| `ignore` | Glob patterns to exclude from analysis (supports `*`, `**`, `?`) | `[]` |
+| `probe_model` | Model for Knowledge Diff sub-agent | `"sonnet"` |
+
+When no config file is present, tools use defaults (`CLAUDE.md` as the context file, no ignore patterns).
 
 ## Philosophy
 
