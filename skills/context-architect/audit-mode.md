@@ -268,90 +268,114 @@ Phase 4 — Knowledge Diff:
   [UNIQUE] "Deploy requires VPN access" (keep)
 ```
 
-### 4. Recommended Structure
+### 4. Structure Proposals
 
-Propose the target two-layer architecture:
+Map Phase 1-3 findings to concrete restructuring actions. Read actual file headings to determine split points.
 
-- Which files to keep, split, merge, or remove
-- Where to create new reference docs
-- How to restructure the index
+**Finding-to-proposal mapping:**
 
-### 5. Fix Proposals
+| Finding | Proposal |
+|---------|----------|
+| monolith (300+ lines) | Split into N docs by top-level headings. Index keeps links only. |
+| index_content_leak | Move code blocks and long paragraphs to `docs/`, replace with links. |
+| role_mixing | Separate into role-specific docs (e.g., `conventions.md`, `testing.md`, `deploy.md`). |
+| fat_doc (200+ lines) | Split by `##` headings into smaller focused docs. |
+| orphan_doc | Add link to index, or recommend deletion if outdated. |
+| broken_link | Suggest correct target path, or remove if target no longer exists. |
 
-Concrete, actionable diffs for each finding. Present as a numbered list so the user can approve individually.
-
-### 6. Reasoning Cost Impact
-
-Estimate token injection before and after the proposed fixes:
+**Output format:**
 
 ```
-Before: ~2,400 tokens (always injected per task)
-After:  ~800 tokens (index only, docs loaded on demand)
-Saving: ~1,600 tokens per task (~67% reduction)
+Structure Proposals:
+  1. CLAUDE.md (342 lines) → split into 3
+     - CLAUDE.md (index, ~30 lines) — links only
+     - docs/conventions.md — style/naming sections (lines 45-120)
+     - docs/testing.md — test sections (lines 121-200)
+     Savings: ~250 tokens removed from index injection
+
+  2. docs/ARCHITECTURE.md (267 lines) → split into 2
+     - docs/architecture.md — design overview
+     - docs/api-reference.md — API details
+
+  3. docs/old-notes.md — orphan, not linked from CLAUDE.md
+     → Add link to index or delete?
 ```
 
----
+Each proposal MUST include the source line ranges where content will be moved from.
+When a monolith or fat_doc is proposed for splitting, read the file's headings to determine natural split points.
 
-## Auto-Fix Proposals
+### 5. Fix Proposals — Deletion Diffs
 
-For each finding, generate a concrete fix. The user approves each one individually before any changes are applied.
+For Phase 4 REDUNDANT items, present line-level removal diffs with approval controls.
 
-### REDUNDANT Items
+**REDUNDANT items:**
 
-Show removal diff — delete lines that tell the AI what it already knows:
+```
+Deletion Proposals (REDUNDANT, {count} items):
 
-```diff
-- ## React Conventions
-- - Use PascalCase for components
-- - Use JSX for templates
-- - Use hooks for state management
+1. {file}:{line}
+   - {statement text}
+   Reason: {reason from sub-agent}
+
+2. {file}:{line}
+   - {statement text}
+   Reason: {reason from sub-agent}
+
+Apply: 1,2,3 / all / none
 ```
 
-### Structural Issues
+**REVIEW items:**
 
-Show restructuring diff — extract content into properly separated docs:
+```
+Needs Review (REVIEW, {count} items):
 
-```diff
-  # CLAUDE.md
-- ## Error Handling
-- All errors must extend AppError. Use throw new AppError('NOT_FOUND', 404)...
-- The error middleware catches these and formats the response...
-+ ## Error Handling
-+ Custom AppError class hierarchy — see [error conventions](src/lib/errors/CONVENTIONS.md)
+{N}. {file}:{line}
+   "{statement text}"
+   AI assessment: {reason from sub-agent}
+   → keep / remove?
 ```
 
-With a new file proposal:
+**User controls:**
+- Individual: `1,3` — apply only selected items
+- Bulk: `all` — apply all REDUNDANT deletions at once
+- Skip: `none` — apply nothing
+- Each REVIEW item is decided individually (keep / remove)
 
-```markdown
-# Error Handling Conventions
-Custom error class hierarchy for API error responses.
+**Applying deletions:**
+- For each approved deletion, remove the exact line from the file using Edit tool
+- After all deletions, re-run `token-estimate.mjs` to show actual savings
+- Present before/after token comparison
 
-## AppError Class
-...
+### 6. Token Impact
+
+Run the token estimator:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/tools/token-estimate.mjs --root .
 ```
 
-### Missing Links
+Use the output to calculate before/after numbers. Present in this format:
 
-Show link additions for orphan docs:
+```
+Token Impact:
+  Current index injection: ~{index_tokens} tokens ({context_file})
+  Current total context: ~{total_tokens} tokens (index + {linked_count} linked docs)
 
-```diff
-  # CLAUDE.md
-  ## Architecture
-  System design overview — see [architecture](docs/ARCHITECTURE.md)
-+
-+ ## Deployment
-+ Deployment process and environments — see [deploy guide](docs/DEPLOY.md)
+  Removable (REDUNDANT): ~{redundant_tokens} tokens ({redundant_count} statements)
+  Separable (index → linked): ~{separable_tokens} tokens (content leak items)
+
+  Estimated savings: ~{savings} tokens/conversation ({percentage}% reduction)
 ```
 
-### Broken Links
+**Calculation rules:**
+- `index_tokens` = tokens from files with `role: "index"` in token-estimate output
+- `total_tokens` = `estimated_tokens` from token-estimate output
+- `redundant_tokens` = sum of `Math.ceil(statement.length / 4)` for each REDUNDANT statement from Phase 4
+- `separable_tokens` = estimate of content identified as `index_content_leak` in Phase 1
+- `savings` = `redundant_tokens + separable_tokens`
+- `percentage` = `Math.round(savings / index_tokens * 100)`
 
-Show link corrections or removals:
-
-```diff
-  ## API Docs
-- API documentation — see [api docs](docs/API.md)
-+ API documentation — see [api docs](docs/api/README.md)
-```
+Numbers MUST be concrete (e.g., "~200 tokens"), not vague (e.g., "some savings").
 
 ---
 
@@ -365,9 +389,10 @@ Show link corrections or removals:
 5. Phase 3: Link integrity          → detect-antipatterns.mjs --phase links
 6. Phase 4: Knowledge diff          → knowledge-probe.mjs --extract --batch + sub-agents
 7. Calculate CCS                    → ccs-score.mjs
-8. Generate report (6-item format)
-9. Present auto-fix proposals
-10. Apply fixes only after user approval
+8. Estimate tokens                  → token-estimate.mjs
+9. Generate report (6-item format)
+10. Present auto-fix proposals
+11. Apply fixes only after user approval
 ```
 
 ## Reminders
