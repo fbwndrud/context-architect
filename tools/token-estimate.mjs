@@ -36,11 +36,14 @@ export async function estimateTokens(rootPath, options = {}) {
     role: 'index',
   });
 
-  // Extract relative links from context file
+  // Extract relative links from context file (deduplicate)
   const linkRe = /\[.*?\]\(((?!https?:\/\/).*?)\)/g;
+  const seen = new Set([ctxPath]);
   let m;
   while ((m = linkRe.exec(ctxContent)) !== null) {
     const abs = path.resolve(root, m[1]);
+    if (seen.has(abs)) continue;
+    seen.add(abs);
     if (!(await fileExists(abs))) continue;
 
     let content;
