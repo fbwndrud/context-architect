@@ -141,3 +141,37 @@ describe('CLI: --context-file flag', () => {
     assert.equal(result.phase, 'structure');
   });
 });
+
+describe('CLI: token-estimate.mjs', () => {
+  it('outputs valid JSON with expected structure', async () => {
+    const { stdout } = await exec(NODE, [
+      `${TOOLS}/token-estimate.mjs`,
+      '--root', 'tests/fixtures/clean-project'
+    ]);
+    const result = JSON.parse(stdout);
+    assert.equal(typeof result.total_chars, 'number');
+    assert.equal(typeof result.estimated_tokens, 'number');
+    assert.ok(Array.isArray(result.files));
+    assert.ok(result.files.length > 0);
+  });
+
+  it('respects --context-file flag', async () => {
+    const { stdout } = await exec(NODE, [
+      `${TOOLS}/token-estimate.mjs`,
+      '--root', 'tests/fixtures/clean-project',
+      '--context-file', 'CLAUDE.md'
+    ]);
+    const result = JSON.parse(stdout);
+    assert.ok(result.total_chars > 0);
+  });
+
+  it('returns zeros for missing context file', async () => {
+    const { stdout } = await exec(NODE, [
+      `${TOOLS}/token-estimate.mjs`,
+      '--root', 'tests/fixtures'
+    ]);
+    const result = JSON.parse(stdout);
+    assert.equal(result.total_chars, 0);
+    assert.equal(result.estimated_tokens, 0);
+  });
+});
