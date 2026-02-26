@@ -39,12 +39,12 @@ The plugin includes CLI tools for automated analysis. When invoked from skills, 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/tools/ccs-score.mjs --root .
 node ${CLAUDE_PLUGIN_ROOT}/tools/detect-antipatterns.mjs --phase structure --root .
-node ${CLAUDE_PLUGIN_ROOT}/tools/knowledge-probe.mjs --root . --extract
+node ${CLAUDE_PLUGIN_ROOT}/tools/knowledge-probe.mjs --root . --extract [--batch]
 ```
 
 All tools accept `--context-file <path>` to override the default context file. Without this flag, the context file is resolved from `.context-architect.json` (see Configuration below), falling back to `CLAUDE.md`.
 
-Phase 4 (Knowledge Diff) classification requires the `/context-architect` skill. The CLI extracts raw statements; a Claude sub-agent then handles question generation, probing, and classification in a single pass.
+Phase 4 (Knowledge Diff) runs during `/context-architect` AUDIT mode. The CLI extracts statements and generates batched probe prompts (`--extract --batch`). The skill then spawns isolated sub-agents via Task tool to classify each statement as REDUNDANT, UNIQUE, or REVIEW. REDUNDANT items get removal diffs for user approval. Phase 4 requires a Claude Code session — it cannot run standalone.
 
 ### Orphan Doc Cap
 
