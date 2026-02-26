@@ -127,7 +127,7 @@ if (isMain) {
   }
 
   if (!extract) {
-    console.error('Usage: node tools/knowledge-probe.mjs --root <path> --extract');
+    console.error('Usage: node tools/knowledge-probe.mjs --root <path> --extract [--batch]');
     process.exit(2);
   }
 
